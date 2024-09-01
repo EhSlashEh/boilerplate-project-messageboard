@@ -84,27 +84,29 @@ module.exports = function (app) {
 
     .put(async (req, res) => {
       try {
-        const { report_id } = req.body;
+        const { thread_id } = req.body; 
         const board = req.params.board;
+        
         const boardData = await BoardModel.findOne({ name: board }).exec();
         if (!boardData) {
           return res.json({ error: "Board not found" });
         }
-
-        let reportedThread = boardData.threads.id(report_id);
-        if (!reportedThread) {
+    
+        const thread = boardData.threads.id(thread_id);
+        if (!thread) {
           return res.json({ error: "Thread not found" });
         }
-
-        reportedThread.reported = true;
+    
+        thread.reported = true;
         await boardData.save();
         return res.send("reported");
+        
       } catch (err) {
         console.error("Error:", err);
-        return res.status(500).send("Internal Server Error");
+        res.status(500).send("Internal Server Error");
       }
     })
-
+    
     .delete(async (req, res) => {
       try {
         const { thread_id, delete_password } = req.body;

@@ -58,7 +58,7 @@ suite("Functional Tests", function () {
         .request(server)
         .put("/api/threads/test-board")
         .set("content-type", "application/json")
-        .send({ report_id: testThread_id })
+        .send({ thread_id: testThread_id })
         .end(function (err, res) {
           assert.equal(res.status, 200);
           assert.equal(res.text, "reported");
