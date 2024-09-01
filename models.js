@@ -5,7 +5,7 @@ const ReplySchema = new Schema({
   text: { type: String },
   delete_password: { type: String },
   created_on: { type: Date, default: () => new Date() },
-  bumped_on: { type: Date, default: () => new Date() },
+  // bumped_on: { type: Date, default: () => new Date() },
   reported: { type: Boolean, default: false },
 });
 const Reply = mongoose.model("Reply", ReplySchema);

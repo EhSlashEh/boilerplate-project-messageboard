@@ -45,16 +45,18 @@ module.exports = function (app) {
         const board = req.params.board;
         const data = await BoardModel.findOne({ name: board }).exec();
         if (!data) {
-          res.json({ error: "No board with this name" });
-        } else {
-          const threads = data.threads.map((thread) => {
+          return res.json({ error: "No board with this name" });
+        }
+
+        const threads = data.threads
+          .sort((a, b) => b.bumped_on - a.bumped_on)
+          .slice(0, 10)
+          .map((thread) => {
             const {
               _id,
               text,
               created_on,
               bumped_on,
-              reported,
-              delete_password,
               replies,
             } = thread;
             return {
@@ -62,17 +64,21 @@ module.exports = function (app) {
               text,
               created_on,
               bumped_on,
-              reported,
-              delete_password,
-              replies,
-              replycount: thread.replies.length,
+              replycount: replies.length,
+              replies: replies
+                .sort((a, b) => b.created_on - a.created_on)
+                .slice(0, 3)
+                .map((reply) => ({
+                  _id: reply._id,
+                  text: reply.text,
+                  created_on: reply.created_on,
+                })),
             };
           });
-          res.json(threads);
-        }
+        return res.json(threads);
       } catch (err) {
         console.error("Error:", err);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
       }
     })
 
@@ -82,7 +88,7 @@ module.exports = function (app) {
         const board = req.params.board;
         const boardData = await BoardModel.findOne({ name: board }).exec();
         if (!boardData) {
-          res.json({ error: "Board not found" });
+          return res.json({ error: "Board not found" });
         }
 
         let reportedThread = boardData.threads.id(report_id);
@@ -91,12 +97,11 @@ module.exports = function (app) {
         }
 
         reportedThread.reported = true;
-        reportedThread.bumped_on = new Date();
         await boardData.save();
-        res.send("success");        
+        return res.send("reported");
       } catch (err) {
         console.error("Error:", err);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
       }
     })
 
@@ -120,7 +125,6 @@ module.exports = function (app) {
         }
   
         if (threadToDelete.delete_password === delete_password) {
-          // threadToDelete.remove();
           boardData.threads.pull(thread_id);
           await boardData.save();
           return res.send("success");
@@ -133,7 +137,7 @@ module.exports = function (app) {
       }
     });
 
-    app.route("/api/replies/:board")
+  app.route("/api/replies/:board")
     .post(async (req, res) => {
       try {
         const { thread_id, text, delete_password } = req.body;
@@ -147,13 +151,14 @@ module.exports = function (app) {
         if (!thread) {
           return res.json({ error: "Thread not found" });
         }
+        newReply.created_on = new Date();
         thread.replies.push(newReply);
-        thread.bumped_on = new Date();
+        thread.bumped_on = newReply.created_on;
         await boardData.save();
-        res.json(newReply);
+        return res.json(newReply);
       } catch (err) {
         console.error("Error:", err);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
       }
     })
   
@@ -169,10 +174,23 @@ module.exports = function (app) {
         if (!thread) {
           return res.json({ error: "Thread not found" });
         }
-        res.json(thread);
+
+        const threadResponse = {
+          _id: thread._id,
+          text: thread.text,
+          created_on: thread.created_on,
+          bumped_on: thread.bumped_on,
+          replies: thread.replies.map((reply) => ({
+            _id: reply._id,
+            text: reply.text,
+            created_on: reply.created_on,
+          })),
+        };
+
+        return res.json(threadResponse);
       } catch (err) {
         console.error("Error:", err);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
       }
     })
   
@@ -182,7 +200,7 @@ module.exports = function (app) {
         const board = req.params.board;
         const data = await BoardModel.findOne({ name: board }).exec();
         if (!data) {
-          res.json({ error: "No board with this name" });
+          return res.json({ error: "No board with this name" });
         }
 
         const thread = data.threads.id(thread_id);
@@ -196,13 +214,11 @@ module.exports = function (app) {
         }
 
         reply.reported = true;
-        reply.bumped_on = new Date();
         await data.save();
-        res.send("success");
-        
+        return res.send("reported");
       } catch (err) {
         console.error("Error:", err);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
       }
     })
 
@@ -212,22 +228,29 @@ module.exports = function (app) {
         const board = req.params.board;
         const data = await BoardModel.findOne({ name: board }).exec();
         if (!data) {
-          res.json({ error: "No board with this name" });
+          return res.json({ error: "No board with this name" });
+        }
+
+        const thread = data.threads.id(thread_id);
+        if (!thread) {
+          return res.json({ error: "Thread not found" });
+        }
+
+        const reply = thread.replies.id(reply_id);
+        if (!reply) {
+          return res.json({ error: "Reply not found" });
+        }
+
+        if (reply.delete_password === delete_password) {
+          reply.text = "[deleted]";
+          await data.save();
+          return res.send("success");
         } else {
-          let thread = data.threads.id(thread_id);
-          let reply = thread.replies.id(reply_id);
-          if (reply.delete_password === delete_password) {
-            // reply.remove();
-            thread.replies.pull(reply_id);
-            await data.save();
-            res.send("success");
-          } else {
-            res.send("incorrect password");
-          }
+          return res.send("incorrect password");
         }
       } catch (err) {
         console.error("Error:", err);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
       }
     });
 };
