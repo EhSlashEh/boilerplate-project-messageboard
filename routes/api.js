@@ -137,7 +137,7 @@ module.exports = function (app) {
         console.log(err);
         res.status(500).json({ error: "There was an error deleting the thread" });
       }
-    });
+    })
     
         
   app.route('/api/replies/:board')
@@ -169,7 +169,57 @@ module.exports = function (app) {
         console.log(err);
         res.send("There was an error");
       }
-    }
-  
-  );
+    })
+
+    .get((req, res) => {
+      const board = req.params.board;
+      BoardModel.findOne({ name: board }, (err, data) => {
+        if (!data) {
+          console.log("No board with this name");
+          res.json({ error: "No board with this name" });
+        } else {
+          console.log("data", data);
+          const thread = data.threads.id(req.query.thread_id);
+          res.json(thread);
+        }
+
+      });
+
+    })
+
+    .put(async (req, res) => {
+      try {
+        console.log("put", req.body);
+        const { thread_id, reply_id } = req.body;
+        const board = req.params.board;
+
+        const boardData = await BoardModel.findOne({ name: board });
+
+        if (!boardData) {
+          return res.status(404).json({ error: "Board not found" });
+        }
+
+        const threadToReport = boardData.threads.id(thread_id);
+        
+        if (!threadToReport) {
+          return res.status(404).json({ error: "Thread not found" });
+        }
+
+        const replyToReport = threadToReport.replies.id(reply_id);
+
+        if (!replyToReport) {
+          return res.status(404).json({ error: "Reply not found" });
+        }
+
+        replyToReport.reported = true;
+        threadToReport.bumped_on = new Date();
+
+        await boardData.save();
+        res.json({ message: "Reply successfully reported" });
+      } catch (err) {
+        console.log(err);
+        res.status(500).json({ error: "There was an error reporting the reply" });
+      }
+    })
+
 };
