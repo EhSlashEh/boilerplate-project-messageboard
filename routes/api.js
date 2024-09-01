@@ -102,70 +102,87 @@ module.exports = function (app) {
 
     .delete(async (req, res) => {
       try {
-        console.log("delete", req.body);
         const { thread_id, delete_password } = req.body;
         const board = req.params.board;
+        
+        console.log("Request body:", req.body);
+        console.log("Board:", board);
+        
+        if (!thread_id || !delete_password) {
+          console.log("Missing thread_id or delete_password");
+          return res.status(400).send("Missing thread_id or delete_password");
+        }
+        
         const boardData = await BoardModel.findOne({ name: board }).exec();
         if (!boardData) {
-          res.json({ error: "Board not found" });
+          console.log("Board not found");
+          return res.json({ error: "Board not found" });
+        }
+        
+        let threadToDelete = boardData.threads.id(thread_id);
+        if (!threadToDelete) {
+          console.log("Thread not found");
+          return res.json({ error: "Thread not found" });
+        }
+  
+        if (threadToDelete.delete_password === delete_password) {
+          console.log("Password correct, deleting thread");
+          threadToDelete.remove();
+          await boardData.save();
+          return res.send("Success");
         } else {
-          let threadToDelete = boardData.threads.id(thread_id);
-          if (threadToDelete.delete_password === delete_password) {
-            threadToDelete.remove();
-            await boardData.save();
-            res.send("Success");
-          } else {
-            res.send("Incorrect Password");
-          }
+          console.log("Incorrect password");
+          return res.send("Incorrect Password");
         }
       } catch (err) {
         console.error("Error:", err);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
       }
     });
 
-  app.route("/api/replies/:board")
+    app.route("/api/replies/:board")
     .post(async (req, res) => {
       try {
-        console.log("thread", req.body);
         const { thread_id, text, delete_password } = req.body;
         const board = req.params.board;
         const newReply = new ReplyModel({ text, delete_password });
         const boardData = await BoardModel.findOne({ name: board }).exec();
         if (!boardData) {
-          res.json({ error: "Board not found" });
-        } else {
-          const date = new Date();
-          let threadToAddReply = boardData.threads.id(thread_id);
-          threadToAddReply.bumped_on = date;
-          threadToAddReply.replies.push(newReply);
-          await boardData.save();
-          res.json(newReply);
+          return res.json({ error: "Board not found" });
         }
+        const thread = boardData.threads.id(thread_id);
+        if (!thread) {
+          return res.json({ error: "Thread not found" });
+        }
+        thread.replies.push(newReply);
+        thread.bumped_on = new Date();
+        await boardData.save();
+        res.json(newReply);
       } catch (err) {
         console.error("Error:", err);
         res.status(500).send("Internal Server Error");
       }
     })
-
+  
     .get(async (req, res) => {
       try {
         const board = req.params.board;
-        const data = await BoardModel.findOne({ name: board }).exec();
-        if (!data) {
-          console.log("No board with this name");
-          res.json({ error: "No board with this name" });
-        } else {
-          console.log("data", data);
-          const thread = data.threads.id(req.query.thread_id);
-          res.json(thread);
+        const thread_id = req.query.thread_id;
+        const boardData = await BoardModel.findOne({ name: board }).exec();
+        if (!boardData) {
+          return res.json({ error: "Board not found" });
         }
+        const thread = boardData.threads.id(thread_id);
+        if (!thread) {
+          return res.json({ error: "Thread not found" });
+        }
+        res.json(thread);
       } catch (err) {
         console.error("Error:", err);
         res.status(500).send("Internal Server Error");
       }
     })
-
+  
     .put(async (req, res) => {
       try {
         const { thread_id, reply_id } = req.body;

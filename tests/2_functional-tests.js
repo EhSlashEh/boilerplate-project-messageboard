@@ -94,10 +94,11 @@ suite("Functional Tests", function () {
           delete_password: "testreply"
         })
         .end(function (err, res) {
-          assert.equal(res.status, 200);
-          assert.equal(res.body.threads[0].replies[0].text, "test reply");
-          testReply_id = res.body.threads[0].replies[0]._id;
-          done();
+            assert.equal(res.status, 200);
+            assert.exists(res.body._id, "Reply should have an ID");
+            assert.equal(res.body.text, "test reply");
+            testReply_id = res.body._id;
+            done();
         });
     });
 
@@ -108,11 +109,12 @@ suite("Functional Tests", function () {
         .set("content-type", "application/json")
         .query({ thread_id: testThread_id })
         .end(function (err, res) {
-          assert.equal(res.status, 200);
-          assert.equal(res.body._id, testThread_id);
-          assert.equal(res.body.text, "test text");
-          assert.equal(res.body.replies[0].text, "test reply");
-          done();
+            assert.equal(res.status, 200);
+            assert.equal(res.body._id, testThread_id);
+            assert.equal(res.body.text, "test text");
+            assert.isArray(res.body.replies, "Replies should be an array");
+            assert.equal(res.body.replies[0].text, "test reply");
+            done();
         });
     });
 
