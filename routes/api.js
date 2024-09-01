@@ -39,9 +39,11 @@ module.exports = function (app) {
       }
     })
 
-    .get((req, res) => {
-      const board = req.params.board;
-      BoardModel.findOne({ name: board }, (err, data) => {
+    .get(async (req, res) => {
+      try {
+        const board = req.params.board;
+        const data = await BoardModel.findOne({ name: board });
+    
         if (!data) {
           console.log("No board with this name");
           res.json({ error: "No board with this name" });
@@ -56,7 +58,7 @@ module.exports = function (app) {
               reported,
               delete_password,
               replies,
-            } = threads;
+            } = thread;
             return {
               _id,
               text,
@@ -65,13 +67,16 @@ module.exports = function (app) {
               reported,
               delete_password,
               replies,
-              replycount: threads.replies.length,
+              replycount: replies.length,
             };
           });
           res.json(threads);
-        };
-      });
+        }
+      } catch (err) {
+        console.log(err);
+        res.status(500).json({ error: "There was an error fetching the threads" });
+      }
     });
-
+    
   app.route('/api/replies/:board');
 };
