@@ -48,7 +48,7 @@ suite("Functional Tests", function () {
         .send({ thread_id: testThread_id, delete_password: "incorrect" })
         .end(function (err, res) {
           assert.equal(res.status, 200);
-          assert.equal(res.text, "Incorrect Password");
+          assert.equal(res.text, "incorrect password");
           done();
         });
     });
@@ -61,23 +61,12 @@ suite("Functional Tests", function () {
         .send({ report_id: testThread_id })
         .end(function (err, res) {
           assert.equal(res.status, 200);
-          assert.equal(res.text, "Success");
+          assert.equal(res.text, "success");
           done();
         });
     });
 
-    test("Deleting a thread with the correct password: DELETE request to /api/threads/{board} with a valid delete_password", function (done) {
-      chai
-        .request(server)
-        .delete("/api/threads/test-board")
-        .set("content-type", "application/json")
-        .send({ thread_id: testThread_id, delete_password: "test" })
-        .end(function (err, res) {
-          assert.equal(res.status, 200);
-          assert.equal(res.text, "Success");
-          done();
-        });
-    });
+
 
   });
 
@@ -130,7 +119,7 @@ suite("Functional Tests", function () {
         })
         .end(function (err, res) {
           assert.equal(res.status, 200);
-          assert.equal(res.text, "Incorrect Password");
+          assert.equal(res.text, "incorrect password");
           done();
         });
     });
@@ -146,28 +135,47 @@ suite("Functional Tests", function () {
         })
         .end(function (err, res) {
           assert.equal(res.status, 200);
-          assert.equal(res.text, "Success");
+          assert.equal(res.text, "success");
           done();
         });
     });
 
-    test("Deleting a reply with the correct password: DELETE request to /api/replies/{board} with a valid delete_password", function (done) {
-      chai
-        .request(server)
-        .delete("/api/replies/test-board")
-        .set("content-type", "application/json")
-        .send({
-          thread_id: testThread_id,
-          reply_id: testReply_id,
-          delete_password: "testreply"
-        })
-        .end(function (err, res) {
-          assert.equal(res.status, 200);
-          assert.equal(res.text, "Success");
-          done();
-        });
-    });
+
 
   });
+
+  suite("Delete cleanup", function () {
+
+      test("Deleting a reply with the correct password: DELETE request to /api/replies/{board} with a valid delete_password", function (done) {
+        chai
+          .request(server)
+          .delete("/api/replies/test-board")
+          .set("content-type", "application/json")
+          .send({
+            thread_id: testThread_id,
+            reply_id: testReply_id,
+            delete_password: "testreply"
+          })
+          .end(function (err, res) {
+            assert.equal(res.status, 200);
+            assert.equal(res.text, "success");
+            done();
+          });
+      });
+
+      test("Deleting a thread with the correct password: DELETE request to /api/threads/{board} with a valid delete_password", function (done) {
+        chai
+          .request(server)
+          .delete("/api/threads/test-board")
+          .set("content-type", "application/json")
+          .send({ thread_id: testThread_id, delete_password: "test" })
+          .end(function (err, res) {
+            assert.equal(res.status, 200);
+            assert.equal(res.text, "success");
+            done();
+          });
+      });
+
+  })
 
 });
